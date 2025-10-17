@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Secure Video</string>
+    <string name="encrypt_video">Encriptar Vídeo</string>
+    <string name="my_videos">Meus Vídeos</string>
+    <string name="encrypted_videos">Vídeos Encriptados</string>
+    <string name="select_video">Selecionar Vídeo</string>
+    <string name="encrypting">Encriptando…</string>
+    <string name="video_encrypted">Vídeo encriptado com sucesso!</string>
+    <string name="error_encrypting">Erro ao encriptar vídeo</string>
+    <string name="no_videos">Nenhum vídeo encriptado ainda</string>
+    <string name="play_video">Reproduzir</string>
+    <string name="delete_video">Excluir</string>
+    <string name="video_player">Player de Vídeo</string>
+    <string name="permission_required">Permissão necessária para acessar vídeos</string>
+    <string name="grant_permission">Conceder Permissão</string>
+</resources>
