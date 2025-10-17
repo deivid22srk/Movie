@@ -2,6 +2,7 @@ package com.movie.securevideoapp.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -22,7 +23,10 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.PlayerView
 import com.movie.securevideoapp.data.SeriesManager
 import kotlinx.coroutines.delay
@@ -50,34 +54,46 @@ fun EpisodePlayerScreen(
     }
     
     LaunchedEffect(episodeId) {
+        Log.d("EpisodePlayer", "Loading episode: $episodeId")
         episode = seriesManager.getEpisodeById(episodeId)
         episode?.let { ep ->
             try {
+                Log.d("EpisodePlayer", "Episode found: ${ep.getDisplayTitle()}")
+                Log.d("EpisodePlayer", "Video URI: ${ep.videoUri}")
+                
                 val uri = Uri.parse(ep.videoUri)
+                Log.d("EpisodePlayer", "Parsed URI: $uri")
                 
-                context.grantUriPermission(
-                    context.packageName,
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
+                val dataSourceFactory = DefaultDataSource.Factory(context)
                 
-                val mediaItem = MediaItem.Builder()
-                    .setUri(uri)
-                    .build()
+                val mediaSource: MediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+                    .createMediaSource(MediaItem.fromUri(uri))
                 
-                exoPlayer.setMediaItem(mediaItem)
+                Log.d("EpisodePlayer", "Setting media source...")
+                exoPlayer.setMediaSource(mediaSource)
+                Log.d("EpisodePlayer", "Preparing player...")
                 exoPlayer.prepare()
                 
-                if (ep.lastPosition > 0) {
+                if (ep.lastPosition > 0 && ep.lastPosition < ep.duration) {
+                    Log.d("EpisodePlayer", "Seeking to position: ${ep.lastPosition}")
                     exoPlayer.seekTo(ep.lastPosition)
                 }
                 
                 exoPlayer.playWhenReady = true
+                Log.d("EpisodePlayer", "Player ready to play")
                 isLoading = false
             } catch (e: Exception) {
+                Log.e("EpisodePlayer", "Error loading video", e)
                 e.printStackTrace()
+                hasError = true
+                errorMessage = "Erro ao carregar: ${e.message}"
                 isLoading = false
             }
+        } ?: run {
+            Log.e("EpisodePlayer", "Episode not found: $episodeId")
+            hasError = true
+            errorMessage = "Episódio não encontrado"
+            isLoading = false
         }
     }
     
@@ -95,6 +111,15 @@ fun EpisodePlayerScreen(
     DisposableEffect(Unit) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
+                val stateName = when (playbackState) {
+                    Player.STATE_IDLE -> "IDLE"
+                    Player.STATE_BUFFERING -> "BUFFERING"
+                    Player.STATE_READY -> "READY"
+                    Player.STATE_ENDED -> "ENDED"
+                    else -> "UNKNOWN"
+                }
+                Log.d("EpisodePlayer", "Playback state changed: $stateName")
+                
                 if (playbackState == Player.STATE_ENDED) {
                     scope.launch {
                         val duration = exoPlayer.duration
@@ -104,6 +129,10 @@ fun EpisodePlayerScreen(
             }
             
             override fun onPlayerError(error: PlaybackException) {
+                Log.e("EpisodePlayer", "Player error occurred", error)
+                Log.e("EpisodePlayer", "Error code: ${error.errorCode}")
+                Log.e("EpisodePlayer", "Error message: ${error.message}")
+                
                 hasError = true
                 errorMessage = when (error.errorCode) {
                     PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
@@ -118,9 +147,11 @@ fun EpisodePlayerScreen(
         exoPlayer.addListener(listener)
         
         onDispose {
+            Log.d("EpisodePlayer", "Disposing player...")
             scope.launch {
                 val position = exoPlayer.currentPosition
                 val duration = exoPlayer.duration
+                Log.d("EpisodePlayer", "Saving progress: $position / $duration")
                 if (position > 0 && duration > 0) {
                     seriesManager.updateEpisodeProgress(episodeId, position, duration)
                 }
