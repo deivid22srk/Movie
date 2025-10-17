@@ -43,6 +43,7 @@ fun EpisodeListScreen(
     var isEncrypting by remember { mutableStateOf(false) }
     var encryptionProgress by remember { mutableStateOf("") }
     var showPermissionWarning by remember { mutableStateOf(false) }
+    var relinkingEpisodeId by remember { mutableStateOf<String?>(null) }
     
     val videoPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
@@ -85,6 +86,45 @@ fun EpisodeListScreen(
                     kotlinx.coroutines.delay(1500)
                     isEncrypting = false
                     encryptionProgress = ""
+                }
+            }
+        }
+    }
+    
+    val relinkVideoLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { videoUri ->
+            scope.launch {
+                relinkingEpisodeId?.let { epId ->
+                    isEncrypting = true
+                    encryptionProgress = "Re-vinculando vídeo..."
+                    try {
+                        try {
+                            context.contentResolver.takePersistableUriPermission(
+                                videoUri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            )
+                        } catch (e: SecurityException) {
+                            e.printStackTrace()
+                        }
+                        
+                        val episode = seriesManager.getEpisodeById(epId)
+                        episode?.let {
+                            val updatedEpisode = it.copy(videoUri = videoUri.toString())
+                            seriesManager.saveEpisode(updatedEpisode)
+                            episodesList = seriesManager.getEpisodesBySeason(seasonId)
+                            encryptionProgress = "Vídeo re-vinculado com sucesso!"
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        encryptionProgress = "Erro: ${e.message}"
+                    } finally {
+                        kotlinx.coroutines.delay(1500)
+                        isEncrypting = false
+                        encryptionProgress = ""
+                        relinkingEpisodeId = null
+                    }
                 }
             }
         }
@@ -168,8 +208,9 @@ fun EpisodeListScreen(
                             EpisodeCard(
                                 episode = episode,
                                 onClick = { onNavigateToPlayer(episode.id) },
-                                onEdit = {
-                                    showAddDialog = true
+                                onRelink = {
+                                    relinkingEpisodeId = episode.id
+                                    relinkVideoLauncher.launch("video/*")
                                 },
                                 onDelete = {
                                     scope.launch {
@@ -252,11 +293,11 @@ fun EmptyEpisodesState() {
 fun EpisodeCard(
     episode: Episode,
     onClick: () -> Unit,
-    onEdit: () -> Unit,
+    onRelink: () -> Unit,
     onDelete: () -> Unit
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var expanded by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
     
     Card(
         onClick = onClick,
@@ -327,12 +368,43 @@ fun EpisodeCard(
                 }
             }
             
-            IconButton(onClick = { showDeleteDialog = true }) {
-                Icon(
-                    imageVector = Icons.Filled.Delete,
-                    contentDescription = "Excluir",
-                    tint = MaterialTheme.colorScheme.error
-                )
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "Mais opções"
+                    )
+                }
+                
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Re-vincular vídeo") },
+                        onClick = {
+                            showMenu = false
+                            onRelink()
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Filled.Refresh, contentDescription = null)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Excluir") },
+                        onClick = {
+                            showMenu = false
+                            showDeleteDialog = true
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Filled.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    )
+                }
             }
         }
     }
