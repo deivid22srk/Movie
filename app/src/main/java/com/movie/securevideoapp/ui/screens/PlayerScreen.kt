@@ -1,8 +1,11 @@
 package com.movie.securevideoapp.ui.screens
 
+import android.app.Activity
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.util.Log
+import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,6 +22,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -41,6 +47,7 @@ fun EpisodePlayerScreen(
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val activity = context as? Activity
     val scope = rememberCoroutineScope()
     val seriesManager = remember { SeriesManager(context) }
     
@@ -48,6 +55,7 @@ fun EpisodePlayerScreen(
     var isLoading by remember { mutableStateOf(true) }
     var hasError by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+    var isFullscreen by remember { mutableStateOf(false) }
     
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build()
@@ -108,6 +116,37 @@ fun EpisodePlayerScreen(
         }
     }
     
+    DisposableEffect(isFullscreen) {
+        activity?.let {
+            if (isFullscreen) {
+                it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                it.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                
+                WindowCompat.setDecorFitsSystemWindows(it.window, false)
+                val windowInsetsController = WindowCompat.getInsetsController(it.window, it.window.decorView)
+                windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                it.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                
+                WindowCompat.setDecorFitsSystemWindows(it.window, true)
+                val windowInsetsController = WindowCompat.getInsetsController(it.window, it.window.decorView)
+                windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+        
+        onDispose {
+            activity?.let {
+                it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                it.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                WindowCompat.setDecorFitsSystemWindows(it.window, true)
+                val windowInsetsController = WindowCompat.getInsetsController(it.window, it.window.decorView)
+                windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+    }
+    
     DisposableEffect(Unit) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
@@ -162,7 +201,11 @@ fun EpisodePlayerScreen(
     }
     
     BackHandler {
-        onBackClick()
+        if (isFullscreen) {
+            isFullscreen = false
+        } else {
+            onBackClick()
+        }
     }
     
     Box(
@@ -232,6 +275,10 @@ fun EpisodePlayerScreen(
                             player = exoPlayer
                             useController = true
                             controllerShowTimeoutMs = 3000
+                            
+                            setFullscreenButtonClickListener { isFullScreen ->
+                                isFullscreen = isFullScreen
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxSize()
@@ -239,17 +286,19 @@ fun EpisodePlayerScreen(
             }
         }
         
-        IconButton(
-            onClick = onBackClick,
-            modifier = Modifier
-                .padding(16.dp)
-                .align(Alignment.TopStart)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.ArrowBack,
-                contentDescription = "Voltar",
-                tint = Color.White
-            )
+        if (!isFullscreen) {
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier
+                    .padding(16.dp)
+                    .align(Alignment.TopStart)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.ArrowBack,
+                    contentDescription = "Voltar",
+                    tint = Color.White
+                )
+            }
         }
     }
 }
@@ -262,6 +311,8 @@ fun PlayerScreen(
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val activity = context as? Activity
+    var isFullscreen by remember { mutableStateOf(false) }
     
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
@@ -273,6 +324,37 @@ fun PlayerScreen(
         }
     }
     
+    DisposableEffect(isFullscreen) {
+        activity?.let {
+            if (isFullscreen) {
+                it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                it.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                
+                WindowCompat.setDecorFitsSystemWindows(it.window, false)
+                val windowInsetsController = WindowCompat.getInsetsController(it.window, it.window.decorView)
+                windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                it.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                
+                WindowCompat.setDecorFitsSystemWindows(it.window, true)
+                val windowInsetsController = WindowCompat.getInsetsController(it.window, it.window.decorView)
+                windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+        
+        onDispose {
+            activity?.let {
+                it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                it.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                WindowCompat.setDecorFitsSystemWindows(it.window, true)
+                val windowInsetsController = WindowCompat.getInsetsController(it.window, it.window.decorView)
+                windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+    }
+    
     DisposableEffect(Unit) {
         onDispose {
             exoPlayer.release()
@@ -280,7 +362,11 @@ fun PlayerScreen(
     }
     
     BackHandler {
-        onBackClick()
+        if (isFullscreen) {
+            isFullscreen = false
+        } else {
+            onBackClick()
+        }
     }
     
     Box(
@@ -294,22 +380,28 @@ fun PlayerScreen(
                     player = exoPlayer
                     useController = true
                     controllerShowTimeoutMs = 3000
+                    
+                    setFullscreenButtonClickListener { isFullScreen ->
+                        isFullscreen = isFullScreen
+                    }
                 }
             },
             modifier = Modifier.fillMaxSize()
         )
         
-        IconButton(
-            onClick = onBackClick,
-            modifier = Modifier
-                .padding(16.dp)
-                .align(Alignment.TopStart)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.ArrowBack,
-                contentDescription = "Voltar",
-                tint = Color.White
-            )
+        if (!isFullscreen) {
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier
+                    .padding(16.dp)
+                    .align(Alignment.TopStart)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.ArrowBack,
+                    contentDescription = "Voltar",
+                    tint = Color.White
+                )
+            }
         }
     }
 }
