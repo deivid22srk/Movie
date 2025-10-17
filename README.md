@@ -137,10 +137,18 @@ app/
 ## ⚠️ Importante
 
 - Os vídeos precisam estar sincronizados no Google Fotos para aparecerem no seletor
-- O app usa URI persistente para manter acesso aos vídeos
-- Se um vídeo for removido do Google Fotos, ele não poderá mais ser reproduzido
-- O backup salva apenas os dados organizacionais, não os vídeos em si
+- O app tenta obter permissão persistente para as URIs, mas alguns provedores (como Google Fotos) não permitem
+- Se um vídeo for removido do Google Fotos ou a permissão expirar, ele não poderá mais ser reproduzido
+- **Recomendação**: Para garantir acesso permanente, mantenha os vídeos sincronizados no Google Fotos
+- O backup salva apenas os dados organizacionais (séries, temporadas, progresso), não os vídeos em si
 - Para uso completo, certifique-se de ter o Google Fotos instalado e sincronizado
+
+### Limitação do Google Fotos
+O Google Fotos não permite que apps de terceiros mantenham acesso permanente aos vídeos via URI. Isso significa que:
+- Os vídeos funcionam perfeitamente enquanto o app está em uso
+- Após algum tempo (dias/semanas), o Android pode revogar o acesso à URI
+- Se isso acontecer, você precisará "re-adicionar" o episódio selecionando o vídeo novamente
+- Os dados da série, temporada e progresso são mantidos, apenas a referência ao vídeo precisa ser atualizada
 
 ## 📄 Licença
 

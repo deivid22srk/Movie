@@ -42,6 +42,7 @@ fun EpisodeListScreen(
     var isLoading by remember { mutableStateOf(true) }
     var isEncrypting by remember { mutableStateOf(false) }
     var encryptionProgress by remember { mutableStateOf("") }
+    var showPermissionWarning by remember { mutableStateOf(false) }
     
     val videoPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
@@ -51,10 +52,16 @@ fun EpisodeListScreen(
                 isEncrypting = true
                 encryptionProgress = "Adicionando vídeo..."
                 try {
-                    context.contentResolver.takePersistableUriPermission(
-                        videoUri,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    )
+                    var persistenceGranted = true
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                            videoUri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+                    } catch (e: SecurityException) {
+                        e.printStackTrace()
+                        persistenceGranted = false
+                    }
                     
                     val nextNumber = seriesManager.getNextEpisodeNumber(seasonId)
                     val newEpisode = Episode(
@@ -66,6 +73,11 @@ fun EpisodeListScreen(
                     seriesManager.saveEpisode(newEpisode)
                     episodesList = seriesManager.getEpisodesBySeason(seasonId)
                     encryptionProgress = "Vídeo adicionado com sucesso!"
+                    
+                    if (!persistenceGranted) {
+                        kotlinx.coroutines.delay(1500)
+                        showPermissionWarning = true
+                    }
                 } catch (e: Exception) {
                     e.printStackTrace()
                     encryptionProgress = "Erro: ${e.message}"
@@ -171,6 +183,33 @@ fun EpisodeListScreen(
                 }
             }
         }
+    }
+    
+    if (showPermissionWarning) {
+        AlertDialog(
+            onDismissRequest = { showPermissionWarning = false },
+            icon = { 
+                Icon(
+                    Icons.Filled.Info, 
+                    null, 
+                    tint = MaterialTheme.colorScheme.primary
+                ) 
+            },
+            title = { Text("Vídeo adicionado!") },
+            text = { 
+                Text(
+                    "O vídeo foi adicionado com sucesso.\n\n" +
+                    "Nota: O Google Fotos não permite acesso permanente aos vídeos. " +
+                    "Se o vídeo parar de funcionar no futuro, basta selecioná-lo novamente. " +
+                    "Seu progresso e dados da série serão mantidos."
+                ) 
+            },
+            confirmButton = {
+                TextButton(onClick = { showPermissionWarning = false }) {
+                    Text("Entendi")
+                }
+            }
+        )
     }
 }
 
