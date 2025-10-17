@@ -1,5 +1,6 @@
 package com.movie.securevideoapp.ui.screens
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -48,30 +49,28 @@ fun EpisodeListScreen(
         uri?.let { videoUri ->
             scope.launch {
                 isEncrypting = true
-                encryptionProgress = "Encriptando vídeo..."
+                encryptionProgress = "Adicionando vídeo..."
                 try {
-                    val nextNumber = seriesManager.getNextEpisodeNumber(seasonId)
-                    val fileName = "episode_${UUID.randomUUID()}"
-                    val encryptedFile = VideoEncryptor.encryptVideo(context, videoUri, fileName)
+                    context.contentResolver.takePersistableUriPermission(
+                        videoUri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
                     
-                    if (encryptedFile != null) {
-                        val newEpisode = Episode(
-                            seasonId = seasonId,
-                            number = nextNumber,
-                            title = "",
-                            encryptedVideoPath = encryptedFile.absolutePath
-                        )
-                        seriesManager.saveEpisode(newEpisode)
-                        episodesList = seriesManager.getEpisodesBySeason(seasonId)
-                        encryptionProgress = "Vídeo adicionado com sucesso!"
-                    } else {
-                        encryptionProgress = "Erro ao encriptar vídeo"
-                    }
+                    val nextNumber = seriesManager.getNextEpisodeNumber(seasonId)
+                    val newEpisode = Episode(
+                        seasonId = seasonId,
+                        number = nextNumber,
+                        title = "",
+                        videoUri = videoUri.toString()
+                    )
+                    seriesManager.saveEpisode(newEpisode)
+                    episodesList = seriesManager.getEpisodesBySeason(seasonId)
+                    encryptionProgress = "Vídeo adicionado com sucesso!"
                 } catch (e: Exception) {
                     e.printStackTrace()
                     encryptionProgress = "Erro: ${e.message}"
                 } finally {
-                    kotlinx.coroutines.delay(2000)
+                    kotlinx.coroutines.delay(1500)
                     isEncrypting = false
                     encryptionProgress = ""
                 }
@@ -156,7 +155,7 @@ fun EpisodeListScreen(
                         items(episodesList, key = { it.id }) { episode ->
                             EpisodeCard(
                                 episode = episode,
-                                onClick = { onNavigateToPlayer(episode.encryptedVideoPath) },
+                                onClick = { onNavigateToPlayer(episode.id) },
                                 onEdit = {
                                     showAddDialog = true
                                 },
@@ -258,8 +257,20 @@ fun EpisodeCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (episode.watched) {
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                if (episode.hasProgress()) {
+                    LinearProgressIndicator(
+                        progress = { episode.getProgressPercentage() / 100f },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "${episode.getProgressPercentage()}% assistido",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                } else if (episode.watched) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Filled.CheckCircle,

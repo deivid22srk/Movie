@@ -10,11 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.movie.securevideoapp.ui.screens.EpisodeListScreen
-import com.movie.securevideoapp.ui.screens.HomeScreen
-import com.movie.securevideoapp.ui.screens.PlayerScreen
-import com.movie.securevideoapp.ui.screens.SeasonListScreen
-import com.movie.securevideoapp.ui.screens.SeriesListScreen
+import com.movie.securevideoapp.ui.screens.*
 import com.movie.securevideoapp.ui.theme.SecureVideoAppTheme
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -49,7 +45,16 @@ fun AppNavigation() {
                 },
                 onNavigateToSeries = {
                     navController.navigate("series")
+                },
+                onNavigateToSettings = {
+                    navController.navigate("settings")
                 }
+            )
+        }
+        
+        composable("settings") {
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         
@@ -87,11 +92,23 @@ fun AppNavigation() {
             val seasonId = backStackEntry.arguments?.getString("seasonId") ?: ""
             EpisodeListScreen(
                 seasonId = seasonId,
-                onNavigateToPlayer = { videoPath ->
-                    val encodedPath = URLEncoder.encode(videoPath, StandardCharsets.UTF_8.toString())
-                    navController.navigate("player/$encodedPath")
+                onNavigateToPlayer = { episodeId ->
+                    navController.navigate("episodePlayer/$episodeId")
                 },
                 onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        
+        composable(
+            route = "episodePlayer/{episodeId}",
+            arguments = listOf(
+                navArgument("episodeId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val episodeId = backStackEntry.arguments?.getString("episodeId") ?: ""
+            EpisodePlayerScreen(
+                episodeId = episodeId,
+                onBackClick = { navController.popBackStack() }
             )
         }
         

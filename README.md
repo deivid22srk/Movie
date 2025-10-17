@@ -1,15 +1,15 @@
-# Secure Video App 🔒
+# Secure Video App 📺
 
-Um aplicativo Android que encripta vídeos MP4 usando criptografia AES, tornando-os reproduzíveis apenas no player customizado do app.
+Um aplicativo Android para organizar e assistir séries através de streaming direto do Google Fotos, com sistema de progresso e backup automático no Google Drive.
 
 ## 🎯 Características
 
-- **Encriptação AES-256**: Vídeos são encriptados com AES/CBC/PKCS5Padding
-- **Player Exclusivo**: Apenas o player do app consegue descriptografar e reproduzir os vídeos
+- **Streaming do Google Fotos**: Reproduza vídeos diretamente do Google Fotos sem precisar encriptar ou duplicar
 - **Organização por Séries**: Crie séries, temporadas e adicione episódios de forma organizada
-- **Integração Google Fotos**: Selecione vídeos diretamente do Google Fotos (sem API key necessária)
+- **Progresso Automático**: Continue assistindo de onde parou - o progresso é salvo automaticamente
+- **Backup no Google Drive**: Faça backup e restaure todos os dados no Google Drive (sem API key!)
 - **Material You Design**: Interface moderna usando Material3 e Jetpack Compose
-- **ExoPlayer Customizado**: Player de vídeo com DataSource customizada para descriptografia em tempo real
+- **Streaming Eficiente**: Não ocupa espaço extra no dispositivo, vídeos ficam no Google Fotos
 - **Gerenciamento Completo**: Crie, organize, reproduza e exclua séries, temporadas e episódios
 
 ## 🛠️ Tecnologias Utilizadas
@@ -29,6 +29,7 @@ implementation("androidx.compose.material:material-icons-extended")
 implementation("androidx.media3:media3-exoplayer:1.2.1")
 implementation("androidx.media3:media3-ui:1.2.1")
 implementation("androidx.navigation:navigation-compose:2.7.6")
+implementation("com.google.code.gson:gson:2.10.1")
 ```
 
 ## 🚀 Como Funciona
@@ -39,24 +40,35 @@ implementation("androidx.navigation:navigation-compose:2.7.6")
 3. **Adicionar Episódios**: Selecione vídeos (do dispositivo ou Google Fotos) para cada temporada
 4. **Organização Automática**: Vídeos são automaticamente encriptados e organizados
 
-### Encriptação e Reprodução
-1. **Seleção de Vídeo**: Selecione vídeos da galeria, armazenamento local ou Google Fotos
-2. **Encriptação Automática**: O vídeo é encriptado usando AES-256 e salvo com extensão `.enc`
-3. **Armazenamento Seguro**: Vídeos encriptados são armazenados no diretório privado do app
-4. **Reprodução Segura**: O player customizado usa uma `DecryptingDataSource` que descriptografa o vídeo em tempo real
-5. **Proteção Total**: Outros players não conseguem reproduzir os arquivos `.enc` pois estão encriptados
+### Streaming e Progresso
+1. **Seleção de Vídeo**: Selecione vídeos da galeria ou Google Fotos (aparecem automaticamente)
+2. **Sem Duplicação**: O vídeo permanece no Google Fotos, apenas a referência é salva
+3. **Streaming Direto**: Reprodução via URI persistente - não ocupa espaço no dispositivo
+4. **Salvamento Automático**: A cada 5 segundos o progresso é salvo automaticamente
+5. **Retomada Automática**: Ao abrir o episódio novamente, continua de onde parou
+6. **Indicador Visual**: Barra de progresso mostra quanto foi assistido de cada episódio
 
 ### Integração Google Fotos
 - O seletor de vídeos do Android mostra automaticamente vídeos do Google Fotos
 - Não é necessário API key ou configuração adicional
 - Funciona através do ContentResolver nativo do Android
+- Usa URI persistente para manter acesso aos vídeos
 
-## 🔐 Segurança
+### Backup e Restore (Google Drive)
+1. **Criar Backup**: Toque em "Fazer Backup no Google Drive" nas configurações
+2. **Seletor do Sistema**: Escolha a pasta do Google Drive onde salvar
+3. **Arquivo ZIP**: O backup é salvo como arquivo .zip contendo todos os dados
+4. **Restaurar**: Toque em "Restaurar do Google Drive" e selecione o arquivo de backup
+5. **Sem API Key**: Usa Storage Access Framework (SAF) nativo do Android
+6. **Dados Incluídos**: Séries, temporadas, episódios, progresso de visualização
 
-- Vídeos encriptados não podem ser reproduzidos por players externos (VLC, MX Player, etc.)
-- Usa algoritmo AES com chave de 256 bits
-- Descriptografia em tempo real durante a reprodução
-- Arquivos armazenados no diretório privado do app
+## 💾 Armazenamento
+
+- Vídeos permanecem no Google Fotos (não duplica arquivos)
+- Apenas referências (URIs) são salvas no app
+- Economiza espaço no dispositivo
+- Dados organizacionais salvos em JSON no diretório privado do app
+- Backup completo pode ser salvo no Google Drive
 
 ## 📱 Requisitos
 
@@ -84,7 +96,8 @@ app/
 ├── src/main/
 │   ├── java/com/movie/securevideoapp/
 │   │   ├── data/
-│   │   │   └── SeriesManager.kt           # Gerenciamento de dados (JSON)
+│   │   │   ├── SeriesManager.kt           # Gerenciamento de dados (JSON)
+│   │   │   └── BackupManager.kt           # Sistema de backup/restore
 │   │   ├── models/
 │   │   │   ├── Series.kt                  # Model de Série
 │   │   │   ├── Season.kt                  # Model de Temporada
@@ -96,7 +109,8 @@ app/
 │   │   │   │   ├── SeriesListScreen.kt    # Lista de séries
 │   │   │   │   ├── SeasonListScreen.kt    # Lista de temporadas
 │   │   │   │   ├── EpisodeListScreen.kt   # Lista de episódios
-│   │   │   │   └── PlayerScreen.kt        # Player de vídeo
+│   │   │   │   ├── PlayerScreen.kt        # Player de vídeo com progresso
+│   │   │   │   └── SettingsScreen.kt      # Configurações e backup
 │   │   │   └── theme/
 │   │   │       ├── Theme.kt               # Tema Material3
 │   │   │       └── Type.kt                # Tipografia
@@ -114,14 +128,19 @@ app/
 - **Tela Principal**: Acesso rápido a vídeos avulsos e botão para acessar séries
 - **Tela de Séries**: Grade visual com todas as séries criadas
 - **Tela de Temporadas**: Lista organizada das temporadas de cada série
-- **Tela de Episódios**: Lista de episódios com seleção de vídeos do Google Fotos
-- **Player de Vídeo**: Player em tela cheia com controles do ExoPlayer
+- **Tela de Episódios**: Lista de episódios com barra de progresso e indicador de "assistido"
+- **Player de Vídeo**: Player em tela cheia que salva progresso automaticamente
+- **Tela de Configurações**: Backup/restore do Google Drive e informações do app
 - **Design Material You**: Cores dinâmicas que se adaptam ao tema do sistema
 - **Navegação Intuitiva**: Navegação hierárquica fácil (Séries → Temporadas → Episódios)
 
-## ⚠️ Aviso
+## ⚠️ Importante
 
-Este app é para fins educacionais e demonstração de conceitos de criptografia. A chave de encriptação está hardcoded no código - em produção, use métodos mais seguros de gerenciamento de chaves (Android Keystore, etc).
+- Os vídeos precisam estar sincronizados no Google Fotos para aparecerem no seletor
+- O app usa URI persistente para manter acesso aos vídeos
+- Se um vídeo for removido do Google Fotos, ele não poderá mais ser reproduzido
+- O backup salva apenas os dados organizacionais, não os vídeos em si
+- Para uso completo, certifique-se de ter o Google Fotos instalado e sincronizado
 
 ## 📄 Licença
 

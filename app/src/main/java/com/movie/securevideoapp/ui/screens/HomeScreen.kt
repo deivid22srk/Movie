@@ -33,7 +33,8 @@ import java.util.UUID
 @Composable
 fun HomeScreen(
     onNavigateToPlayer: (String) -> Unit,
-    onNavigateToSeries: () -> Unit
+    onNavigateToSeries: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -95,6 +96,13 @@ fun HomeScreen(
                         Icon(
                             Icons.Filled.Tv,
                             contentDescription = "Minhas Séries",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            Icons.Filled.Settings,
+                            contentDescription = "Configurações",
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }

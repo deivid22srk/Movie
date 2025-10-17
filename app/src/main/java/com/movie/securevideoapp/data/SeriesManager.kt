@@ -136,16 +136,27 @@ class SeriesManager(private val context: Context) {
         val type = object : TypeToken<List<Episode>>() {}.type
         val allEpisodes = gson.fromJson<List<Episode>>(json, type)?.toMutableList() ?: return@withContext
         
-        val episode = allEpisodes.find { it.id == episodeId }
-        episode?.let {
-            val videoFile = File(it.encryptedVideoPath)
-            if (videoFile.exists()) {
-                videoFile.delete()
-            }
-        }
-        
         allEpisodes.removeAll { it.id == episodeId }
         episodesFile.writeText(gson.toJson(allEpisodes))
+    }
+    
+    suspend fun updateEpisodeProgress(episodeId: String, position: Long, duration: Long) = withContext(Dispatchers.IO) {
+        if (!episodesFile.exists()) return@withContext
+        val json = episodesFile.readText()
+        val type = object : TypeToken<List<Episode>>() {}.type
+        val allEpisodes = gson.fromJson<List<Episode>>(json, type)?.toMutableList() ?: return@withContext
+        
+        val index = allEpisodes.indexOfFirst { it.id == episodeId }
+        if (index >= 0) {
+            val episode = allEpisodes[index]
+            val watched = position >= duration * 0.95
+            allEpisodes[index] = episode.copy(
+                lastPosition = position,
+                duration = duration,
+                watched = watched
+            )
+            episodesFile.writeText(gson.toJson(allEpisodes))
+        }
     }
     
     suspend fun getNextSeasonNumber(seriesId: String): Int {
