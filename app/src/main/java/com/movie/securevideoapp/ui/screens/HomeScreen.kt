@@ -32,7 +32,8 @@ import java.util.UUID
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToPlayer: (String) -> Unit
+    onNavigateToPlayer: (String) -> Unit,
+    onNavigateToSeries: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -89,6 +90,15 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Secure Video") },
+                actions = {
+                    IconButton(onClick = onNavigateToSeries) {
+                        Icon(
+                            Icons.Filled.Tv,
+                            contentDescription = "Minhas Séries",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary

@@ -6,9 +6,11 @@ Um aplicativo Android que encripta vídeos MP4 usando criptografia AES, tornando
 
 - **Encriptação AES-256**: Vídeos são encriptados com AES/CBC/PKCS5Padding
 - **Player Exclusivo**: Apenas o player do app consegue descriptografar e reproduzir os vídeos
+- **Organização por Séries**: Crie séries, temporadas e adicione episódios de forma organizada
+- **Integração Google Fotos**: Selecione vídeos diretamente do Google Fotos (sem API key necessária)
 - **Material You Design**: Interface moderna usando Material3 e Jetpack Compose
 - **ExoPlayer Customizado**: Player de vídeo com DataSource customizada para descriptografia em tempo real
-- **Gerenciamento de Vídeos**: Lista, reproduz e exclui vídeos encriptados facilmente
+- **Gerenciamento Completo**: Crie, organize, reproduza e exclua séries, temporadas e episódios
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -31,11 +33,23 @@ implementation("androidx.navigation:navigation-compose:2.7.6")
 
 ## 🚀 Como Funciona
 
-1. **Seleção de Vídeo**: O usuário seleciona um vídeo MP4 da galeria
-2. **Encriptação**: O vídeo é encriptado usando AES-256 e salvo com extensão `.enc`
+### Sistema de Organização
+1. **Criar Série**: Crie uma série com título e descrição
+2. **Adicionar Temporadas**: Adicione temporadas numeradas à série
+3. **Adicionar Episódios**: Selecione vídeos (do dispositivo ou Google Fotos) para cada temporada
+4. **Organização Automática**: Vídeos são automaticamente encriptados e organizados
+
+### Encriptação e Reprodução
+1. **Seleção de Vídeo**: Selecione vídeos da galeria, armazenamento local ou Google Fotos
+2. **Encriptação Automática**: O vídeo é encriptado usando AES-256 e salvo com extensão `.enc`
 3. **Armazenamento Seguro**: Vídeos encriptados são armazenados no diretório privado do app
-4. **Reprodução**: O player customizado usa uma `DecryptingDataSource` que descriptografa o vídeo em tempo real durante a reprodução
-5. **Proteção**: Outros players não conseguem reproduzir os arquivos `.enc` pois estão encriptados
+4. **Reprodução Segura**: O player customizado usa uma `DecryptingDataSource` que descriptografa o vídeo em tempo real
+5. **Proteção Total**: Outros players não conseguem reproduzir os arquivos `.enc` pois estão encriptados
+
+### Integração Google Fotos
+- O seletor de vídeos do Android mostra automaticamente vídeos do Google Fotos
+- Não é necessário API key ou configuração adicional
+- Funciona através do ContentResolver nativo do Android
 
 ## 🔐 Segurança
 
@@ -69,27 +83,41 @@ O APK compilado fica disponível nos artifacts do workflow.
 app/
 ├── src/main/
 │   ├── java/com/movie/securevideoapp/
+│   │   ├── data/
+│   │   │   └── SeriesManager.kt           # Gerenciamento de dados (JSON)
+│   │   ├── models/
+│   │   │   ├── Series.kt                  # Model de Série
+│   │   │   ├── Season.kt                  # Model de Temporada
+│   │   │   ├── Episode.kt                 # Model de Episódio
+│   │   │   └── WatchProgress.kt           # Model de progresso
 │   │   ├── ui/
 │   │   │   ├── screens/
-│   │   │   │   ├── HomeScreen.kt      # Tela principal com lista de vídeos
-│   │   │   │   └── PlayerScreen.kt    # Tela do player
+│   │   │   │   ├── HomeScreen.kt          # Tela principal
+│   │   │   │   ├── SeriesListScreen.kt    # Lista de séries
+│   │   │   │   ├── SeasonListScreen.kt    # Lista de temporadas
+│   │   │   │   ├── EpisodeListScreen.kt   # Lista de episódios
+│   │   │   │   └── PlayerScreen.kt        # Player de vídeo
 │   │   │   └── theme/
-│   │   │       ├── Theme.kt           # Tema Material3
-│   │   │       └── Type.kt            # Tipografia
-│   │   ├── VideoEncryptor.kt          # Lógica de encriptação
-│   │   ├── DecryptingDataSource.kt    # DataSource customizada para ExoPlayer
-│   │   ├── EncryptedVideo.kt          # Model de dados
-│   │   └── MainActivity.kt            # Activity principal
-│   ├── res/                           # Recursos (strings, colors, etc)
+│   │   │       ├── Theme.kt               # Tema Material3
+│   │   │       └── Type.kt                # Tipografia
+│   │   ├── VideoEncryptor.kt              # Lógica de encriptação
+│   │   ├── DecryptingDataSource.kt        # DataSource customizada
+│   │   ├── EncryptedVideo.kt              # Model de vídeo
+│   │   └── MainActivity.kt                # Activity principal
+│   ├── res/                               # Recursos
 │   └── AndroidManifest.xml
 └── build.gradle.kts
 ```
 
 ## 🎨 Interface
 
-- **Tela Principal**: Lista de vídeos encriptados com opção de adicionar novos
-- **Tela do Player**: Player em tela cheia com controles do ExoPlayer
+- **Tela Principal**: Acesso rápido a vídeos avulsos e botão para acessar séries
+- **Tela de Séries**: Grade visual com todas as séries criadas
+- **Tela de Temporadas**: Lista organizada das temporadas de cada série
+- **Tela de Episódios**: Lista de episódios com seleção de vídeos do Google Fotos
+- **Player de Vídeo**: Player em tela cheia com controles do ExoPlayer
 - **Design Material You**: Cores dinâmicas que se adaptam ao tema do sistema
+- **Navegação Intuitiva**: Navegação hierárquica fácil (Séries → Temporadas → Episódios)
 
 ## ⚠️ Aviso
 

@@ -14,4 +14,24 @@
     <string name="video_player">Player de Vídeo</string>
     <string name="permission_required">Permissão necessária para acessar vídeos</string>
     <string name="grant_permission">Conceder Permissão</string>
+    
+    <string name="my_series">Minhas Séries</string>
+    <string name="seasons">Temporadas</string>
+    <string name="episodes">Episódios</string>
+    <string name="add_series">Adicionar Série</string>
+    <string name="add_season">Adicionar Temporada</string>
+    <string name="add_episode">Adicionar Episódio</string>
+    <string name="series_title">Título da Série</string>
+    <string name="series_description">Descrição</string>
+    <string name="season_number">Número da Temporada</string>
+    <string name="episode_number">Número do Episódio</string>
+    <string name="episode_title">Título do Episódio</string>
+    <string name="delete_series">Excluir Série</string>
+    <string name="delete_season">Excluir Temporada</string>
+    <string name="delete_episode">Excluir Episódio</string>
+    <string name="no_series">Nenhuma série criada</string>
+    <string name="no_seasons">Nenhuma temporada criada</string>
+    <string name="no_episodes">Nenhum episódio adicionado</string>
+    <string name="watched">Assistido</string>
+    <string name="continue_watching">Continuar Assistindo</string>
 </resources>
