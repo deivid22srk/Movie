@@ -22,8 +22,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker
-import com.movie.securevideoapp.EncryptedVideo
+import com.movie.securevideoapp.Video
 import com.movie.securevideoapp.VideoEncryptor
+import com.movie.securevideoapp.VideoManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,9 +38,10 @@ fun HomeScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
-    var videos by remember { mutableStateOf<List<EncryptedVideo>>(emptyList()) }
+    var videos by remember { mutableStateOf<List<Video>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var showPermissionDialog by remember { mutableStateOf(false) }
+    var showVideoOptionsDialog by remember { mutableStateOf(false) }
     var hasPermission by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -62,7 +64,7 @@ fun HomeScreen(
         hasPermission = isGranted
     }
     
-    val videoPickerLauncher = rememberLauncherForActivityResult(
+    val videoPickerForImport = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
@@ -71,6 +73,25 @@ fun HomeScreen(
                 try {
                     val fileName = "video_${UUID.randomUUID()}"
                     VideoEncryptor.encryptVideo(context, it, fileName)
+                    loadVideos(context) { videos = it }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    isLoading = false
+                }
+            }
+        }
+    }
+    
+    val videoPickerForStreaming = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let {
+            scope.launch {
+                isLoading = true
+                try {
+                    val fileName = "Vídeo Google Fotos ${System.currentTimeMillis()}"
+                    VideoManager.saveRemoteVideoUri(context, it, fileName)
                     loadVideos(context) { videos = it }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -99,7 +120,7 @@ fun HomeScreen(
             FloatingActionButton(
                 onClick = {
                     if (hasPermission) {
-                        videoPickerLauncher.launch("video/*")
+                        showVideoOptionsDialog = true
                     } else {
                         showPermissionDialog = true
                     }
@@ -124,11 +145,17 @@ fun HomeScreen(
                 VideoList(
                     videos = videos,
                     onPlayVideo = { video ->
-                        onNavigateToPlayer(video.file.absolutePath)
+                        when (video) {
+                            is Video.LocalEncrypted -> onNavigateToPlayer(video.file.absolutePath)
+                            is Video.RemoteStream -> onNavigateToPlayer(video.uri.toString())
+                        }
                     },
                     onDeleteVideo = { video ->
                         scope.launch {
-                            VideoEncryptor.deleteEncryptedVideo(video.file)
+                            when (video) {
+                                is Video.LocalEncrypted -> VideoEncryptor.deleteEncryptedVideo(video.file)
+                                is Video.RemoteStream -> VideoManager.deleteRemoteVideo(context, video)
+                            }
                             loadVideos(context) { videos = it }
                         }
                     }
@@ -163,6 +190,97 @@ fun HomeScreen(
             }
         )
     }
+    
+    if (showVideoOptionsDialog) {
+        AlertDialog(
+            onDismissRequest = { showVideoOptionsDialog = false },
+            title = { Text("Adicionar Vídeo") },
+            text = {
+                Column {
+                    Text("Escolha como deseja adicionar o vídeo:")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    OutlinedCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showVideoOptionsDialog = false
+                                videoPickerForStreaming.launch(arrayOf("video/*"))
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Cloud,
+                                contentDescription = null,
+                                modifier = Modifier.size(40.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = "Streaming",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = "Reproduzir direto do Google Fotos sem baixar",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    OutlinedCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showVideoOptionsDialog = false
+                                videoPickerForImport.launch("video/*")
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Lock,
+                                contentDescription = null,
+                                modifier = Modifier.size(40.dp),
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = "Importar e Criptografar",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = "Baixar e salvar localmente com criptografia",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showVideoOptionsDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -180,7 +298,7 @@ fun EmptyState() {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Nenhum vídeo encriptado",
+            text = "Nenhum vídeo adicionado",
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
@@ -195,16 +313,16 @@ fun EmptyState() {
 
 @Composable
 fun VideoList(
-    videos: List<EncryptedVideo>,
-    onPlayVideo: (EncryptedVideo) -> Unit,
-    onDeleteVideo: (EncryptedVideo) -> Unit
+    videos: List<Video>,
+    onPlayVideo: (Video) -> Unit,
+    onDeleteVideo: (Video) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(videos, key = { it.file.absolutePath }) { video ->
+        items(videos, key = { it.id }) { video ->
             VideoItem(
                 video = video,
                 onPlayClick = { onPlayVideo(video) },
@@ -217,7 +335,7 @@ fun VideoList(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoItem(
-    video: EncryptedVideo,
+    video: Video,
     onPlayClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
@@ -237,13 +355,21 @@ fun VideoItem(
             Surface(
                 modifier = Modifier.size(56.dp),
                 shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.primaryContainer
+                color = if (video.isEncrypted) {
+                    MaterialTheme.colorScheme.secondaryContainer
+                } else {
+                    MaterialTheme.colorScheme.primaryContainer
+                }
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Movie,
+                    imageVector = if (video.isEncrypted) Icons.Filled.Lock else Icons.Filled.Cloud,
                     contentDescription = null,
                     modifier = Modifier.padding(12.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = if (video.isEncrypted) {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    }
                 )
             }
             
@@ -252,15 +378,36 @@ fun VideoItem(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                Text(
-                    text = video.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = video.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (!video.isEncrypted) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                text = "STREAM",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${video.formattedSize} • ${video.formattedDate}",
+                    text = if (video.size > 0) {
+                        "${video.formattedSize} • ${video.formattedDate}"
+                    } else {
+                        video.formattedDate
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
@@ -280,7 +427,15 @@ fun VideoItem(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Excluir vídeo?") },
-            text = { Text("Esta ação não pode ser desfeita.") },
+            text = { 
+                Text(
+                    if (video.isEncrypted) {
+                        "Esta ação não pode ser desfeita."
+                    } else {
+                        "A referência ao vídeo será removida, mas o arquivo original permanecerá no Google Fotos."
+                    }
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -300,10 +455,9 @@ fun VideoItem(
     }
 }
 
-private suspend fun loadVideos(context: android.content.Context, onLoaded: (List<EncryptedVideo>) -> Unit) {
+private suspend fun loadVideos(context: android.content.Context, onLoaded: (List<Video>) -> Unit) {
     withContext(Dispatchers.IO) {
-        val files = VideoEncryptor.getAllEncryptedVideos(context)
-        val videos = files.map { EncryptedVideo(it) }
+        val videos = VideoManager.getAllVideos(context)
         withContext(Dispatchers.Main) {
             onLoaded(videos)
         }
