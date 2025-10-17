@@ -6,7 +6,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.ContentDataSource
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
-import androidx.media3.exoplayer.upstream.DefaultDataSource
+import androidx.media3.datasource.DefaultDataSource
 
 @UnstableApi
 class ContentUriDataSourceFactory(private val context: Context) : DataSource.Factory {
